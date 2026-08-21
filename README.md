@@ -275,6 +275,11 @@ harness/ralph.sh 2 20 sh -c 'copilot --output-format json --stream on --allow-al
 - Edit the check registry in [gate-data.ts](harness/gate-data.ts) and CI in [ci.yml](.github/workflows/ci.yml)
 - `semgrep` uses registry configs (`p/typescript`, `p/javascript`, `p/security-audit`); it needs network and a machine-level install
 
+## CI Troubleshooting
+
+**Playwright browser mismatch in GitHub Actions**
+If Playwright tests fail in CI because multiple browser projects are configured but only one browser is installed, run `pnpm --prefix harness run setup:e2e` in your CI workflow. This command installs the browser set expected by the Playwright config.
+
 ## Coordination
 
 - Use `git log --oneline <branch>..HEAD` to show what's unpushed.
