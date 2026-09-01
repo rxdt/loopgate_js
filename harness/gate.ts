@@ -47,11 +47,12 @@ const UNSAFE_ENV_PREFIXES = ["GIT_"];
 */
 export function gitSafeEnvironment(): NodeJS.ProcessEnv {
   return Object.fromEntries(
-    Object.entries(process.env).filter(
-      ([key]) =>
+    Object.entries(process.env).filter(([key]) => {
+      return (
         !UNSAFE_ENV_KEYS.has(key) &&
-        UNSAFE_ENV_PREFIXES.every((prefix) => !key.startsWith(prefix)),
-    ),
+        UNSAFE_ENV_PREFIXES.every((prefix) => !key.startsWith(prefix))
+      );
+    }),
   );
 }
 
@@ -197,7 +198,7 @@ function stagedSymlinks(repo: string): string[] {
     .split("\0")
     .filter((entry) => entry.length > 0)
     .flatMap((entry) => {
-      const [meta = "", file = ""] = entry.split("\t");
+      const [meta = "", file = ""] = entry.split("\t", 2);
       return meta.startsWith("120000") ? [file] : [];
     });
 }

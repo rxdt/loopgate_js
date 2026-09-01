@@ -25,6 +25,7 @@ const GIT_LOG_ARGS = [
 type Agent = (typeof AGENTS)[number];
 type LogAgent = Agent | "unknown";
 type Rec = Record<string, unknown>;
+type Rows = readonly (readonly string[])[];
 
 interface ParsedLog {
   readonly lineCount: number;
@@ -71,13 +72,14 @@ export const formatTokenCount = (value: number | undefined): string => {
   return String(value);
 };
 
-const numberFrom = (source: Rec, keys: readonly string[]): number | undefined =>
-  keys
-    .map((key) => source[key])
+const numberFrom = (rec: Rec, keys: readonly string[]): number | undefined => {
+  return keys
+    .map((key) => rec[key])
     .find(
       (value): value is number =>
         typeof value === "number" && Number.isFinite(value) && value >= 0,
     );
+};
 
 const usageTotal = (source: Rec): number | undefined => {
   const total = numberFrom(source, TOTAL_KEYS);
@@ -135,13 +137,14 @@ export const inferAgent = (relativePath: string): LogAgent => {
   const [first = ""] = relativePath.split(path.sep);
   const file = path.basename(relativePath);
   return (
-    AGENTS.find(
-      (agent) =>
+    AGENTS.find((agent) => {
+      return (
         first === agent ||
         file === `${agent}.jsonl` ||
         file.endsWith(`-${agent}.jsonl`) ||
-        file.startsWith(`${agent}-`),
-    ) ?? "unknown"
+        file.startsWith(`${agent}-`)
+      );
+    }) ?? "unknown"
   );
 };
 
@@ -180,8 +183,8 @@ const addUsage = (
 const iterationTotals = (
   iterations: readonly number[],
   usage: ReadonlyMap<number, ReadonlyMap<string, number>>,
-): readonly number[] =>
-  iterations.flatMap((iteration) => {
+): readonly number[] => {
+  return iterations.flatMap((iteration) => {
     const values = usage.get(iteration);
     const result = values?.get("result");
     const total =
@@ -191,6 +194,7 @@ const iterationTotals = (
         .reduce((sum, [, value]) => sum + value, 0);
     return total > 0 ? [total] : [];
   });
+};
 
 const better = (
   current: [number, string],
@@ -262,11 +266,12 @@ const collect = (root: string, directory: string, logs: LogFile[]): void => {
 const discoverLogFiles = (runsRoot: string): readonly LogFile[] => {
   const logs: LogFile[] = [];
   if (existsSync(runsRoot)) collect(runsRoot, runsRoot, logs);
-  return logs.toSorted(
-    (left, right) =>
+  return logs.toSorted((left, right) => {
+    return (
       right.mtimeMs - left.mtimeMs ||
-      left.relative.localeCompare(right.relative),
-  );
+      left.relative.localeCompare(right.relative)
+    );
+  });
 };
 
 const row = (cells: readonly string[], limits: readonly number[]): string =>
@@ -275,19 +280,16 @@ const row = (cells: readonly string[], limits: readonly number[]): string =>
 const section = (
   title: string,
   headers: readonly string[],
-  rows: readonly (readonly string[])[],
+  rows: Rows,
   limits: readonly number[],
-): string =>
-  [
-    title,
-    row(headers, limits),
-    ...(rows.length === 0
-      ? ["(none)"]
-      : rows.map((cells) => row(cells, limits))),
-  ].join("\n");
+): string => {
+  const body =
+    rows.length === 0 ? ["(none)"] : rows.map((cells) => row(cells, limits));
+  return [title, row(headers, limits), ...body].join("\n");
+};
 
-const tokenRows = (logs: readonly LogFile[]): readonly (readonly string[])[] =>
-  AGENTS.map((agent) => {
+const tokenRows = (logs: readonly LogFile[]): Rows => {
+  return AGENTS.map((agent) => {
     const mine = logs.filter((log) => log.agent === agent);
     const usages = mine.flatMap((log) => log.usageByIteration);
     const total = usages.reduce((sum, value) => sum + value, 0);
@@ -303,11 +305,12 @@ const tokenRows = (logs: readonly LogFile[]): readonly (readonly string[])[] =>
       total === 0 ? "n/a" : formatTokenCount(total),
     ];
   });
+};
 
 const firstSentence = (value: string): string =>
   /^.*?[.!?](?:\s|$)/u.exec(value)?.[0].trim() ?? value;
 
-export type ReadCommits = (repo: string) => readonly (readonly string[])[];
+export type ReadCommits = (repo: string) => Rows;
 
 export const commitRows: ReadCommits = (repo) => {
   const result = spawnSync("git", ["-C", repo, ...GIT_LOG_ARGS], {
@@ -318,7 +321,7 @@ export const commitRows: ReadCommits = (repo) => {
     .split("\n")
     .filter(Boolean)
     .map((line) => {
-      const [hash = "", date = "", subject = ""] = line.split("\t");
+      const [hash = "", date = "", subject = ""] = line.split("\t", 3);
       return [hash, date, firstSentence(subject)];
     });
 };
@@ -335,15 +338,15 @@ export const renderStatus = (
 ): string => {
   const root = path.join(repo, "scratchpad", "runs");
   const logs = discoverLogFiles(root);
-  const recentLogs = logs
-    .slice(0, 10)
-    .map((log) => [
+  const recentLogs = logs.slice(0, 10).map((log) => {
+    return [
       log.agent,
       String(log.lineCount),
       new Date(log.mtimeMs).toISOString().slice(0, 16).replaceAll("T", " "),
       log.relative,
       log.summary,
-    ]);
+    ];
+  });
   return [
     `${String(logs.length)} run log(s) in ${root}`,
     section("Recent logs", LOG_HEAD, recentLogs, [8, 6, 16, 48, 100]),

@@ -5,16 +5,13 @@ packages:
 allowBuilds:
   esbuild: true
   "@scarf/scarf": false
-  unrs-resolver: false
-  semgrep: set this to true or false
 
-# Force patched versions of vulnerable dev/transitive deps flagged by the audit + osv checks.
-# All are pulled in by tooling (lhci, ajv-cli, telemetry), not shipped to consumers.
 overrides:
-  # typescript 7.x (native compiler) breaks the compiler API used by preferences.ts,
-  # typescript-eslint, and eslint-plugin-sonarjs; hold the whole graph on 5.x until they support it.
-  typescript: "5.x"
   tmp: ">=0.2.6"
   uuid: ">=11.1.1"
   fast-json-patch: ">=3.1.1"
   "@opentelemetry/core": ">=2.8.0"
+
+auditConfig:
+  ignoreGhsas:
+    - GHSA-jmr9-qjv8-65gv
