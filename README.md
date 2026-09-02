@@ -100,7 +100,7 @@ _**[See the Python version of this loop harness here](https://github.com/rxdt/lo
 1. Copy this directory (or use it as a GitHub template), then `git init` and `node harness/harness.mjs setup`.
 2. Make it yours: set `name` in `package.json` (root), and the `<title>` in `frontend/index.html`.
 3. Write your grand vision into `docs/plan.md`.
-4. Optionally add the first spec in `docs/specs/`, or have an agent draft the first specs.
+4. Add your first spec in `docs/specs/` (see [Creating Your First Spec](docs/creating-specs.md)), or have an agent draft the first specs.
 5. Replace the seed app. `frontend/src/main.ts` and its unit test `frontend/tests/home.spec.ts` are a minimal wired-up "Hello, world" proving the whole gate. Grow them, don't delete them.
 6. Strict TypeScript, ESLint, Stylelint, Vitest @ 100% coverage, Playwright, and Lighthouse budgets are configured in `harness/`.
 7. Your coding preferences go in `harness/preferences.ts`.
