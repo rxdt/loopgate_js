@@ -40,10 +40,13 @@ const HARNESS = import.meta.dirname;
 const REPO = path.join(HARNESS, "..");
 const readRepo = (relpath: string): string =>
   readFileSync(path.join(REPO, relpath), "utf8");
-const isStringRecord = (value: unknown): value is Record<string, string> =>
-  typeof value === "object" &&
-  value !== null &&
-  Object.values(value).every((entry) => typeof entry === "string");
+const isStringRecord = (value: unknown): value is Record<string, string> => {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Object.values(value).every((entry) => typeof entry === "string")
+  );
+};
 const readPackageScripts = (relpath: string): Record<string, string> => {
   const parsed: unknown = JSON.parse(readRepo(relpath));
   if (
@@ -88,13 +91,14 @@ const shellQuote = (value: string): string => {
   const escaped = value.split("'").join(escapedSingleQuote);
   return `'${escaped}'`;
 };
-const checkToolNames = (checks: Record<string, string[]>): string[] =>
-  Object.values(checks).map(([tool]) => {
+const checkToolNames = (checks: Record<string, string[]>): string[] => {
+  return Object.values(checks).map(([tool]) => {
     if (tool === undefined) {
       throw new Error("check command is empty");
     }
     return tool;
   });
+};
 const stubCheckTools = (
   repo: string,
   checks: Record<string, string[]>,
@@ -112,10 +116,11 @@ const stubCheckTools = (
   }
   return log;
 };
-const stubbedToolCalls = (log: string): string[] =>
-  readFileSync(log, "utf8")
+const stubbedToolCalls = (log: string): string[] => {
+  return readFileSync(log, "utf8")
     .split("\n")
     .filter((line) => line.length > 0);
+};
 const writeHarnessCliWrapper = (repo: string): void => {
   const harnessDirectory = path.join(repo, "harness");
   const realHarnessUrl = pathToFileURL(path.join(HARNESS, "harness.mjs")).href;
@@ -207,7 +212,6 @@ const seededTemplate = once((): string => {
 });
 
 /**
-
 A fresh Git repo for a test: a filesystem copy of the seeded template (see `seededTemplate`).
 */
 function makeRepo(): string {
@@ -622,10 +626,11 @@ const parsePackageJson = (contents: string): PackageJson => {
 const readPackageJsonInRepo = (repo: string): PackageJson =>
   parsePackageJson(readFileSync(path.join(repo, "package.json"), "utf8"));
 
-const readHarnessPackageJsonInRepo = (repo: string): PackageJson =>
-  parsePackageJson(
+const readHarnessPackageJsonInRepo = (repo: string): PackageJson => {
+  return parsePackageJson(
     readFileSync(path.join(repo, "harness", "package.json"), "utf8"),
   );
+};
 
 const makeInstallRepo = (scripts: Record<string, string>): string => {
   const repo = makeRepo();
@@ -681,11 +686,13 @@ const importedEslintConfig = once(async (): Promise<FlatConfigBlock[]> => {
     isPlainObject(value) ? value : undefined;
   const blocks = isPlainObject(module) ? module.default : undefined;
   if (Array.isArray(blocks) && blocks.every((block) => isPlainObject(block))) {
-    return blocks.map((block) => ({
-      files: block.files,
-      linterOptions: asRecord(block.linterOptions),
-      rules: asRecord(block.rules),
-    }));
+    return blocks.map((block) => {
+      return {
+        files: block.files,
+        linterOptions: asRecord(block.linterOptions),
+        rules: asRecord(block.rules),
+      };
+    });
   }
   throw new Error("eslint config is not an array of objects");
 });
@@ -911,11 +918,11 @@ describe("runChecks", () => {
     "skips external gate tool %s when it is not installed (ENOENT)",
     (tool) => {
       const repo = makeRepo();
-      const failures = withEmptyPath(() =>
-        runChecks(repo, {
+      const failures = withEmptyPath(() => {
+        return runChecks(repo, {
           external: [tool, "--version"],
-        }),
-      );
+        });
+      });
       expect(failures).toEqual([]);
     },
   );
@@ -1107,9 +1114,8 @@ describe("runGate / runPreflight wiring", () => {
   test("preflight surfaces a failing quality check", () => {
     const repo = makeRepo();
     stageFile(repo, "frontend/src/report.ts", "export const y = 2;\n");
-    const problems = runPreflight(repo, () => [
-      "security failed:\nempty trust anchors",
-    ]);
+    const failure = "security failed:\nempty trust anchors";
+    const problems = runPreflight(repo, () => [failure]);
     const isSurfaced = problems.some((problem) =>
       problem.includes("security failed"),
     );
@@ -1266,10 +1272,10 @@ describe("loop containment", () => {
     stageFiles(repo, {
       "frontend/src/report.ts": "export const keep = 1;\n",
       ...Object.fromEntries(
-        directories.map((directory) => [
-          agentFileIn(directory),
-          "agent edit\n",
-        ]),
+        directories.map((directory) => {
+          const file = agentFileIn(directory);
+          return [file, "agent edit\n"];
+        }),
       ),
     });
 
@@ -2032,13 +2038,14 @@ describe("frontend gate shape", () => {
   // re-exports (`export ... from "..."`) or a lone pass-through call. Such files exist only to
   // dodge coverage or indirection and are banned outright: delete them and inline their one use.
   test("no harness source module is a pure re-export or forwarding shim", () => {
-    const sources = readdirSync(HARNESS).filter(
-      (name) =>
+    const sources = readdirSync(HARNESS).filter((name) => {
+      return (
         /\.(?:ts|mjs|cjs|js)$/u.test(name) &&
         !name.endsWith(".test.ts") &&
         !name.includes(".config.") &&
-        !name.endsWith("rc.cjs"),
-    );
+        !name.endsWith("rc.cjs")
+      );
+    });
     expect(sources.length).toBeGreaterThan(0);
 
     const shims: string[] = [];
@@ -2447,13 +2454,13 @@ describe("frontend gate shape", () => {
 
   test("eslint config limits directory-specific weakening to harness tooling", async () => {
     const config = await importedEslintConfig();
-    const directorySpecificBlocks = config.filter((block) =>
-      Array.isArray(block.files)
+    const directorySpecificBlocks = config.filter((block) => {
+      return Array.isArray(block.files)
         ? block.files.some((file) =>
             /(?:^|\/)(?:frontend|harness)\//u.test(String(file)),
           )
-        : false,
-    );
+        : false;
+    });
     expect(directorySpecificBlocks).toHaveLength(1);
     expect(directorySpecificBlocks[0]?.files).toEqual(["harness/**/*.ts"]);
     expect(directorySpecificBlocks[0]?.rules).toEqual(

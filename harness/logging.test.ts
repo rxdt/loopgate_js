@@ -16,14 +16,15 @@ import {
 
 // Stub commit reader so tests never spawn Git. `firstSentence` clips subjects at the
 // first sentence, so the stubbed subjects mirror what real Git output would yield.
-const stubCommits =
-  (...subjects: string[]): ReadCommits =>
-  () =>
-    subjects.map((subject, index) => [
-      `hash${String(index)}`,
-      "2026-07-02",
-      subject,
-    ]);
+const commitRow = (subject: string, index: number): readonly string[] => {
+  const hash = `hash${String(index)}`;
+  return [hash, "2026-07-02", subject];
+};
+
+const stubCommits = (...subjects: string[]): ReadCommits => {
+  const rows = subjects.map((subject, index) => commitRow(subject, index));
+  return () => rows;
+};
 
 const makeRepo = (): string => mkdtempSync(path.join(tmpdir(), "logging-"));
 
