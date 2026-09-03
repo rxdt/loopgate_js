@@ -54,9 +54,10 @@ export const parseCount = (
   raw: string | undefined,
   fallback: number,
 ): number | undefined => {
-  if (raw === undefined) return fallback;
-  const value = Number(raw);
-  return Number.isSafeInteger(value) && value >= 1 ? value : undefined;
+  const value = raw === undefined ? fallback : Number(raw);
+  return raw === undefined || (Number.isSafeInteger(value) && value >= 1)
+    ? value
+    : undefined;
 };
 
 export const formatLiveLine = (line: string): string => {

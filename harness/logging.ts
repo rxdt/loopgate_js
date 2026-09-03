@@ -42,6 +42,9 @@ interface LogFile extends ParsedLog {
 
 const isRec = (value: unknown): value is Rec =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+const maybe = <T>(value: T | undefined): T | undefined => value;
+const pair = <A, B>(first: A, second: B | undefined): [A, B] | undefined =>
+  second === undefined ? undefined : [first, second];
 
 const compact = (value: string): string =>
   value.replaceAll(/\s+/gu, " ").trim();
@@ -83,7 +86,7 @@ const numberFrom = (rec: Rec, keys: readonly string[]): number | undefined => {
 
 const usageTotal = (source: Rec): number | undefined => {
   const total = numberFrom(source, TOTAL_KEYS);
-  if (total !== undefined) return total;
+  if (total !== undefined) return maybe(total);
   const input = numberFrom(source, INPUT_KEYS);
   const output = numberFrom(source, OUTPUT_KEYS);
   return input === undefined && output === undefined
@@ -100,28 +103,29 @@ const toolText = (part: Rec): string => {
 };
 
 const textPart = (content: unknown): string | undefined => {
-  if (!Array.isArray(content)) return undefined;
+  if (!Array.isArray(content)) return maybe<string>(undefined);
   for (const part of content) {
     if (!isRec(part)) continue;
-    if (part.type === "text" && typeof part.text === "string") return part.text;
+    if (part.type === "text" && typeof part.text === "string")
+      return maybe(part.text);
     if (part.type === "tool_use" && typeof part.name === "string")
-      return toolText(part);
+      return maybe(toolText(part));
   }
-  return undefined;
+  return maybe<string>(undefined);
 };
 
 const agentText = (value: Rec): string | undefined => {
   const item = isRec(value.item) ? value.item : undefined;
   if (item?.type === "agent_message" && typeof item.text === "string")
-    return item.text;
+    return maybe(item.text);
   const message = isRec(value.message) ? value.message : undefined;
   return textPart(message?.content);
 };
 
 const summary = (value: Rec): [number, string] | undefined => {
-  if (typeof value.result === "string") return [4, value.result];
+  if (typeof value.result === "string") return pair(4, value.result);
   const text = agentText(value);
-  if (text !== undefined) return [3, text];
+  if (text !== undefined) return pair(3, text);
   const usage = isRec(value.usage) ? usageTotal(value.usage) : undefined;
   return usage === undefined
     ? undefined
@@ -153,19 +157,16 @@ const keyedUsage = (
   lineNumber: number,
 ): readonly [string, number] | undefined => {
   const direct = isRec(value.usage) ? usageTotal(value.usage) : undefined;
-  if (direct !== undefined)
-    return [
-      value.type === "result" ? "result" : `direct-${String(lineNumber)}`,
-      direct,
-    ];
+  const key =
+    value.type === "result" ? "result" : `direct-${String(lineNumber)}`;
+  if (direct !== undefined) return pair(key, direct);
   const message = isRec(value.message) ? value.message : undefined;
   const fallback = isRec(message?.usage)
     ? usageTotal(message.usage)
     : undefined;
-  if (fallback === undefined) return undefined;
   const id =
     typeof message?.id === "string" ? message.id : `line-${String(lineNumber)}`;
-  return [`fallback-${id}-${String(fallback)}`, fallback];
+  return pair(`fallback-${id}-${String(fallback)}`, fallback);
 };
 
 const addUsage = (

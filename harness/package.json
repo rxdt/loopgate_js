@@ -39,6 +39,7 @@
     "@playwright/test": "latest",
     "@secretlint/secretlint-rule-preset-recommend": "latest",
     "@stoplight/spectral-cli": "latest",
+    "@typescript/native": "npm:typescript@~7.0.2",
     "@types/node": "latest",
     "@vitest/coverage-v8": "latest",
     "ajv": "latest",
@@ -75,7 +76,7 @@
     "stylelint-media-use-custom-media": "latest",
     "stylelint-plugin-defensive-css": "latest",
     "tsx": "latest",
-    "typescript": "~7.0.2",
+    "typescript": "npm:@typescript/typescript6@~6.0.2",
     "typescript-eslint": "latest",
     "vite": "latest",
     "vitest": "latest"
