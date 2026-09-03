@@ -147,35 +147,33 @@ function runOneCheck(
   command: readonly string[],
 ): string | undefined {
   const [executable, ...rest] = command;
-  if (executable === undefined || executable.length === 0) {
-    return `${name} failed:\nempty command`;
+  let failure: string | undefined = `${name} failed:\nempty command`;
+  if (executable !== undefined && executable.length > 0) {
+    const started = Date.now();
+    process.stderr.write(`gate: starting ${name}: ${command.join(" ")}\n`);
+    const result = spawnSync(executable, rest, {
+      cwd: context.repo,
+      encoding: "utf8",
+      env: context.environment,
+      // 0 => undefined => no timeout: the full gate must run long browser/build checks.
+      timeout: context.timeoutMs > 0 ? context.timeoutMs : undefined,
+    });
+    const elapsedMs = Date.now() - started;
+    process.stderr.write(
+      `gate: finished ${name} in ${String(elapsedMs)}ms ` +
+        `status=${String(result.status)} signal=${String(result.signal)} ` +
+        `error=${result.error === undefined ? "none" : String(result.error)}\n`,
+    );
+    const hasFailed =
+      result.status !== 0 ||
+      result.signal !== null ||
+      result.error !== undefined;
+    failure =
+      hasFailed && !isToolMissing(result, executable)
+        ? `${name} failed:\n${describeFailure(result, command)}`
+        : undefined;
   }
-  const started = Date.now();
-  process.stderr.write(`gate: starting ${name}: ${command.join(" ")}\n`);
-  const result = spawnSync(executable, rest, {
-    cwd: context.repo,
-    encoding: "utf8",
-    env: context.environment,
-    // 0 => undefined => no timeout: the full gate must run long browser/build checks.
-    timeout: context.timeoutMs > 0 ? context.timeoutMs : undefined,
-  });
-  const elapsedMs = Date.now() - started;
-  process.stderr.write(
-    `gate: finished ${name} in ${String(elapsedMs)}ms ` +
-      `status=${String(result.status)} signal=${String(result.signal)} ` +
-      `error=${result.error === undefined ? "none" : String(result.error)}\n`,
-  );
-  if (isToolMissing(result, executable)) {
-    return undefined;
-  }
-  if (
-    result.status === 0 &&
-    result.signal === null &&
-    result.error === undefined
-  ) {
-    return undefined;
-  }
-  return `${name} failed:\n${describeFailure(result, command)}`;
+  return failure;
 }
 
 /**
