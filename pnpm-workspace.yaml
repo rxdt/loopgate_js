@@ -4,6 +4,7 @@ packages:
 
 allowBuilds:
   esbuild: true
+  unrs-resolver: true
   "@scarf/scarf": false
 
 overrides:
